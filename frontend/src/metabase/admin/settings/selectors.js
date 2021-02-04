@@ -94,6 +94,11 @@ const SECTIONS = updateSectionsWithPlugins({
         display_name: t`Enable X-ray features`,
         type: "boolean",
       },
+      {
+        key: "ssh-heartbeat-interval-sec",
+        display_name: t`SSH Heartbeat Interval (seconds)`,
+        type: "number",
+      },
     ],
   },
   updates: {
