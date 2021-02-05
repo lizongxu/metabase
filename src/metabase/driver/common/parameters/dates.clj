@@ -9,8 +9,7 @@
             [metabase.util.i18n :refer [tru]]
             [metabase.util.schema :as su]
             [schema.core :as s])
-  (:import java.time.LocalDateTime
-           java.time.temporal.Temporal))
+  (:import java.time.temporal.Temporal))
 
 (s/defn date-type?
   "Is param type `:date` or some subtype like `:date/month-year`?"
@@ -81,26 +80,26 @@
 
 (def ^:private operations-by-date-unit
   {"second" {:unit-range second-range
-             :to-period t/seconds}
+             :to-period  t/seconds}
    "minute" {:unit-range minute-range
-             :to-period t/minutes}
-   "hour" {:unit-range hour-range
-           :to-period t/hours}
-   "day"   {:unit-range day-range
-            :to-period  t/days}
-   "week"  {:unit-range week-range
-            :to-period  t/weeks}
-   "month" {:unit-range month-range
-            :to-period  t/months}
-   "year"  {:unit-range year-range
-            :to-period  t/years}})
+             :to-period  t/minutes}
+   "hour"   {:unit-range hour-range
+             :to-period  t/hours}
+   "day"    {:unit-range day-range
+             :to-period  t/days}
+   "week"   {:unit-range week-range
+             :to-period  t/weeks}
+   "month"  {:unit-range month-range
+             :to-period  t/months}
+   "year"   {:unit-range year-range
+             :to-period  t/years}})
 
 (defn- maybe-reduce-resolution [unit dt]
   (if
     (contains? #{"second" "minute" "hour"} unit)
     dt
     ; for units that are a day or longer, convert back to LocalDate
-    (.toLocalDate ^LocalDateTime dt)))
+    (t/local-date dt)))
 
 ;;; +----------------------------------------------------------------------------------------------------------------+
 ;;; |                                              DATE STRING DECODERS                                              |
@@ -138,14 +137,14 @@
 (def ^:private relative-date-string-decoders
   [{:parser #(= % "today")
     :range  (fn [_ dt]
-              (let [dt-res (.toLocalDate ^LocalDateTime dt)]
+              (let [dt-res (t/local-date dt)]
                 {:start dt-res,
                  :end   dt-res}))
     :filter (fn [_ field] [:= [:datetime-field field :day] [:relative-datetime :current]])}
 
    {:parser #(= % "yesterday")
     :range  (fn [_ dt]
-              (let [dt-res (.toLocalDate ^LocalDateTime dt)]
+              (let [dt-res (t/local-date dt)]
                 {:start (t/minus dt-res (t/days 1))
                  :end   (t/minus dt-res (t/days 1))}))
     :filter (fn [_ field] [:= [:datetime-field field :day] [:relative-datetime -1 :day]])}
@@ -169,16 +168,16 @@
     :filter (fn [{:keys [unit int-value]} field]
               [:time-interval field int-value (keyword unit)])}
 
-   {:parser (regex->parser #"last(day|week|month|year)" [:unit])
-    :range  (fn [{:keys [unit-range to-period]} dt]
-              (let [last-unit (t/minus (.toLocalDate ^LocalDateTime dt) (to-period 1))]
+   {:parser (regex->parser #"last(second|minute|hour|day|week|month|year)" [:unit])
+    :range  (fn [{:keys [unit unit-range to-period]} dt]
+              (let [last-unit (t/minus (maybe-reduce-resolution unit dt) (to-period 1))]
                 (unit-range last-unit last-unit)))
     :filter (fn [{:keys [unit]} field]
               [:time-interval field :last (keyword unit)])}
 
-   {:parser (regex->parser #"this(day|week|month|year)" [:unit])
-    :range  (fn [{:keys [unit-range]} dt]
-              (let [dt-adj (.toLocalDate ^LocalDateTime dt)]
+   {:parser (regex->parser #"this(second|minute|hour|day|week|month|year)" [:unit])
+    :range  (fn [{:keys [unit unit-range]} dt]
+              (let [dt-adj (maybe-reduce-resolution unit dt)]
                 (unit-range dt-adj dt-adj)))
     :filter (fn [{:keys [unit]} field]
               [:time-interval field :current (keyword unit)])}])
