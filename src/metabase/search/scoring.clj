@@ -61,14 +61,19 @@
 
 (defn- score-with
   [scoring-fns tokens result]
-  (apply max-key :score
-         (for [column (searchable-columns-for-model (model-name->class (:model result)))
-               :let [target (-> result
-                                  (get column)
-                                  (column->string (:model result) column))]]
-           {:score  (reduce + (score-ratios tokens (-> target normalize tokenize) scoring-fns))
-            :match  target
-            :column column})))
+  (let [scores (for [column (searchable-columns-for-model (model-name->class (:model result)))
+                     :let   [target (-> result
+                                        (get column)
+                                        (column->string (:model result) column))
+                             score (reduce + (score-ratios tokens
+                                                           (-> target normalize tokenize)
+                                                           scoring-fns))]
+                     :when (> score 0)]
+                 {:score  score
+                  :match  target
+                  :column column})]
+    (when (seq scores)
+      (apply max-key :score scores))))
 
 (def ^:private consecutivity-scorer
   (partial largest-common-subseq-length matches?))
@@ -101,18 +106,18 @@
 
 (defn- score-with-match
   [query-string result]
-  (if (seq query-string)
+  (when (seq query-string)
     (score-with match-based-scorers
                 (tokenize (normalize query-string))
-                result)
-    {:score 0}))
+                result)))
 
 (defn sort-results
   "Sorts the given results based on internal scoring. Returns them in order, with `:matched_column` and
   `matched_text` injected in"
   [query-string results]
   (let [scores-and-results (for [result results
-                                 :let [{:keys [score column match]} (score-with-match query-string result)]]
+                                 :let [{:keys [score column match] :as hit} (score-with-match query-string result)]
+                                 :when hit]
                              [[(- score)
                                (model->sort-position (:model result))
                                (:name result)]

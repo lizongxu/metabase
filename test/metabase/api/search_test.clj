@@ -23,9 +23,12 @@
    :favorite            nil
    :table_id            false
    :database_id         false
+   :dataset_query       nil
    :table_schema        nil
    :table_name          nil
-   :table_description   nil})
+   :table_description   nil
+   :matched_column      "display_name"
+   :matched_text        nil})
 
 (defn- table-search-results
   "Segments and Metrics come back with information about their Tables as of 0.33.0. The `model-defaults` for Segment and
@@ -37,30 +40,25 @@
      :id (mt/id :checkins))))
 
 (defn- sorted-results [results]
-  (sort-by (juxt (comp (var-get #'api.search/model->sort-position) :model) :name) results))
+  (sort-by (juxt (comp (var-get #'metabase.search.scoring/model->sort-position) :model) :name) results))
 
 (defn- default-search-results []
-  (sorted-results
-   [(merge
-     default-search-row
-     {:name "dashboard test dashboard", :model "dashboard", :favorite false})
-    (merge
-     default-search-row
-     {:name "collection test collection", :model "collection", :collection_id true, :collection_name true})
-    (merge
-     default-search-row
-     {:name "card test card", :model "card", :favorite false})
-    (merge
-     default-search-row
-     {:name "pulse test pulse", :model "pulse", :archived nil})
-    (merge
-     default-search-row
-     {:model "metric", :name "metric test metric", :description "Lookin' for a blueberry"}
-     (table-search-results))
-    (merge
-     default-search-row
-     {:model "segment", :name "segment test segment", :description "Lookin' for a blueberry"}
-     (table-search-results))]))
+  (letfn [(make-result [name & kvs]
+            (merge
+             default-search-row
+             {:name name :matched_text name :matched_column "name"}
+             (apply array-map kvs)))]
+    (sorted-results
+     [(make-result "dashboard test dashboard", :model "dashboard", :favorite false)
+      (make-result "collection test collection", :model "collection", :collection_id true, :collection_name true)
+      (make-result "card test card", :model "card", :favorite false)
+      (make-result "pulse test pulse", :model "pulse", :archived nil)
+      (merge
+       (make-result "metric", :name "metric test metric", :description "Lookin' for a blueberry")
+       (table-search-results))
+      (merge
+       (make-result "segment test segment", :model "segment", :description "Lookin' for a blueberry")
+       (table-search-results))])))
 
 (defn- default-metric-segment-results []
   (filter #(contains? #{"metric" "segment"} (:model %)) (default-search-results)))
@@ -311,6 +309,7 @@
    {:name         table-name
     :display_name table-name
     :table_name   table-name
+    :matched_text table-name
     :table_id     true
     :archived     nil
     :model        "table"
