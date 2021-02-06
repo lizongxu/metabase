@@ -148,7 +148,7 @@ executors:
       - image: circleci/clojure:lein-2.8.1
       - image: metabase/presto-mb-ci
         environment:
-          JAVA_TOOL_OPTIONS: "-Xmx2g"
+          JAVA_TOOL_OPTIONS: "-Xmx1g"
 
   sparksql:
     working_directory: /home/circleci/metabase/metabase/
