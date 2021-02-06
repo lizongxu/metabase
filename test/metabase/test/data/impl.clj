@@ -103,10 +103,12 @@
         ;; sync newly added DB
         (u/with-timeout sync-timeout-ms
           (let [reference-duration (or (some-> (get @reference-sync-durations database-name) u/format-nanoseconds)
-                                       "NONE")]
-            (u/profile (format "Sync %s Database %s (reference H2 duration: %s)" driver database-name reference-duration)
-              ;; only do "quick sync" for non-H2 drivers, because it tends to take FOREVER
-              (sync/sync-database! db (when-not (= driver :h2) {:quick? true}))
+                                       "NONE")
+                quick-sync? (not= database-name "test-data")]
+            (u/profile (format "%s %s Database %s (reference H2 duration: %s)"
+                               (if quick-sync? "QUICK sync" "Sync") driver database-name reference-duration)
+              ;; only do "quick sync" for non `test-data` datasets, because it can take literally MINUTES on CI.
+              (sync/sync-database! db (when quick-sync? {:quick? true}))
               ;; add extra metadata for fields
               (try
                 (add-extra-metadata! database-definition db)
