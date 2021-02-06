@@ -240,7 +240,7 @@
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
 (defn db->sync-tables
-  "Return all the Tables that should go through the sync processes for DATABASE-OR-ID."
+  "Return all the Tables that should go through the sync processes for `database-or-id`."
   [database-or-id]
   (db/select Table, :db_id (u/the-id database-or-id), :active true, :visibility_type nil))
 
@@ -250,8 +250,8 @@
 
 (defprotocol ^:private NameForLogging
   (name-for-logging [this]
-    "Return an appropriate string for logging an object in sync logging messages.
-     Should be something like \"postgres Database 'test-data'\""))
+    "Return an appropriate string for logging an object in sync logging messages. Should be something like \"postgres
+  Database 'test-data'\""))
 
 (extend-protocol NameForLogging
   i/DatabaseInstance
